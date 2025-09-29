@@ -1,0 +1,61 @@
+{
+  "preloaded_voices": {
+    "naija_female": {
+      "name": "Nigerian Female",
+      "description": "High-quality Nigerian female voice with natural accent",
+      "language": "en",
+      "gender": "female",
+      "accent": "nigerian",
+      "quality": "high"
+    },
+    "naija_male": {
+      "name": "Nigerian Male",
+      "description": "High-quality Nigerian male voice with natural accent", 
+      "language": "en",
+      "gender": "male",
+      "accent": "nigerian",
+      "quality": "high"
+    },
+    "default": {
+      "name": "Default Voice",
+      "description": "Default XTTS neural voice",
+      "language": "en",
+      "gender": "neutral",
+      "accent": "neutral",
+      "quality": "high"
+    },
+    "professional_female": {
+      "name": "Professional Female",
+      "description": "Professional female voice for business communications",
+      "language": "en",
+      "gender": "female",
+      "accent": "american",
+      "quality": "high"
+    },
+    "professional_male": {
+      "name": "Professional Male", 
+      "description": "Professional male voice for business communications",
+      "language": "en",
+      "gender": "male",
+      "accent": "american",
+      "quality": "high"
+    }
+  },
+  "voice_categories": {
+    "business": ["professional_female", "professional_male"],
+    "nigerian": ["naija_female", "naija_male"],
+    "default": ["default"]
+  },
+  "supported_languages": {
+    "en": "English",
+    "es": "Spanish", 
+    "fr": "French",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese"
+  }
+}

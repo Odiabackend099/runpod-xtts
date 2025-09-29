@@ -1,0 +1,45 @@
+# RunPod TTS Service Requirements
+# Core dependencies for RunPod serverless deployment
+
+# RunPod SDK
+runpod>=1.0.0
+
+# Edge TTS
+edge-tts>=6.1.0
+
+# Web Framework (for health checks)
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+
+# HTTP Client
+requests>=2.31.0
+httpx>=0.25.0
+
+# Audio Processing
+soundfile>=0.12.0
+librosa>=0.10.0
+
+# Utilities
+python-multipart>=0.0.6
+pydantic>=2.0.0
+
+# Logging and Monitoring
+structlog>=23.0.0
+
+# Async support
+asyncio-mqtt>=0.13.0
+
+# Base64 encoding/decoding (built-in, but explicit for clarity)
+# base64 - built-in Python module
+
+# JSON handling (built-in)
+# json - built-in Python module
+
+# Temporary file handling (built-in)
+# tempfile - built-in Python module
+
+# File system operations (built-in)
+# os - built-in Python module
+
+# Type hints
+typing-extensions>=4.8.0

@@ -1,0 +1,52 @@
+# Core TTS Engine
+TTS==0.21.3
+torch>=2.0.0
+torchaudio>=2.0.0
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Authentication & Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Streaming & Audio
+aiofiles==23.2.1
+websockets==12.0
+
+# Database & Caching
+redis==5.0.1
+sqlalchemy==2.0.23
+alembic==1.12.1
+
+# Monitoring & Logging
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Rate Limiting
+slowapi==0.1.9
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Production
+gunicorn==21.2.0
+
+# Performance and Monitoring
+psutil==5.9.6
+matplotlib==3.7.2
+pandas==2.1.1
+pyyaml==6.0.1
+
+# Load Testing
+aiohttp==3.9.0
+artillery==1.7.0
+
+# GPU Support (optional)
+# torch==2.1.0+cu118 --index-url https://download.pytorch.org/whl/cu118
+# torchaudio==2.1.0+cu118 --index-url https://download.pytorch.org/whl/cu118
