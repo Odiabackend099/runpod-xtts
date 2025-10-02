@@ -1,0 +1,87 @@
+{
+  "suite": "authentication",
+  "description": "Test API key authentication and authorization",
+  "tests": [
+    {
+      "name": "Valid API key should allow access",
+      "request": {
+        "method": "GET",
+        "url": "/v1/voices",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.voices",
+          "expected": "exists"
+        }
+      ]
+    },
+    {
+      "name": "Invalid API key should return 401",
+      "request": {
+        "method": "GET",
+        "url": "/v1/voices",
+        "headers": {
+          "Authorization": "Bearer invalid_key_12345"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 401
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.detail",
+          "expected": "Invalid or inactive API key"
+        }
+      ]
+    },
+    {
+      "name": "Missing API key should return 403",
+      "request": {
+        "method": "GET",
+        "url": "/v1/voices"
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 403
+        }
+      ]
+    },
+    {
+      "name": "Tenant stats should return usage data",
+      "request": {
+        "method": "GET",
+        "url": "/v1/tenant/stats",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.tenant_id",
+          "expected": "exists"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.requests_count",
+          "expected": "number"
+        }
+      ]
+    }
+  ]
+}

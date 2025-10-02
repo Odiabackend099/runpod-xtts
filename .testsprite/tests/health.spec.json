@@ -1,0 +1,58 @@
+{
+  "suite": "health",
+  "description": "Test service health and availability",
+  "tests": [
+    {
+      "name": "Health endpoint should return healthy status",
+      "request": {
+        "method": "GET",
+        "url": "/v1/health"
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.status",
+          "expected": "matches",
+          "pattern": "^(healthy|degraded)$"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.version",
+          "expected": "exists"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.uptime",
+          "expected": "number"
+        },
+        {
+          "type": "responseTime",
+          "maxMs": 100,
+          "description": "Health check should respond in under 100ms"
+        }
+      ]
+    },
+    {
+      "name": "Root endpoint should return service info",
+      "request": {
+        "method": "GET",
+        "url": "/"
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.service",
+          "expected": "exists"
+        }
+      ]
+    }
+  ]
+}

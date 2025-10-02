@@ -46,8 +46,8 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Include API routes
-app.include_router(api_app.router, prefix="/api")
+# Include API routes without extra prefix so endpoints are at /v1/*
+app.include_router(api_app.router)
 
 # Add CORS middleware
 app.add_middleware(

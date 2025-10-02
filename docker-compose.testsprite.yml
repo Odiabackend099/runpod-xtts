@@ -1,0 +1,48 @@
+version: "3.9"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: tts-redis
+    ports:
+      - "6379:6379"
+
+  tts-service:
+    build:
+      context: ./tts-service
+    container_name: tts-service
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      AUDIO_STORAGE_DIR: /tmp/tts-audio
+      STORAGE_BACKEND: local
+    volumes:
+      - ./tts-service:/app
+    depends_on:
+      - redis
+    ports:
+      - "8000:8000"
+
+  testsprite:
+    image: node:20-slim
+    container_name: testsprite-runner
+    working_dir: /app
+    environment:
+      API_KEY: ${TESTSPRITE_API_KEY:-sk_test_1234567890abcdef}
+      REDIS_URL: redis://redis:6379/0
+      AUDIO_STORAGE_DIR: /tmp/tts-audio
+    volumes:
+      - ./:/app
+    depends_on:
+      - tts-service
+    entrypoint:
+      - npx
+      - "@testsprite/testsprite-mcp@latest"
+      - "--config"
+      - "mcp-config.json"
+      - "--suite"
+      - "health"
+      - "--suite"
+      - "authentication"
+      - "--suite"
+      - "synthesis"
+    restart: "no"

@@ -5,6 +5,7 @@ Handles API key validation, tenant isolation, and rate limiting
 
 import hashlib
 import time
+import os
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
@@ -15,14 +16,16 @@ from fastapi import HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import redis
 import json
+from ..utils.supabase_client import supabase_auth
 
 logger = logging.getLogger(__name__)
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# Redis client for rate limiting and caching
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Redis client for rate limiting and caching (supports REDIS_URL)
+_redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = redis.from_url(_redis_url, decode_responses=True)
 
 class APIKeyManager:
     """Manages API keys and tenant authentication"""
@@ -60,14 +63,31 @@ class APIKeyManager:
         }
     
     def validate_api_key(self, api_key: str) -> Optional[Dict[str, Any]]:
-        """Validate API key and return tenant info"""
+        """Validate API key and return tenant info.
+        Priority: Supabase (if configured) -> in-memory demo keys.
+        """
+        # Try Supabase-backed auth first
+        tenant = supabase_auth.get_tenant_by_api_key(api_key)
+        if tenant:
+            # Ensure api_key included for downstream permission checks
+            tenant.setdefault("api_key", api_key)
+            return tenant
+
+        # Fallback to in-memory keys
         if api_key not in self.api_keys:
             return None
-        
+
         key_info = self.api_keys[api_key]
         if not key_info.get("is_active", False):
             return None
-        
+
+        # Ensure shape is consistent with Supabase return
+        key_info = {
+            **key_info,
+            "api_key": api_key,
+            "permissions": key_info.get("permissions", ["synthesize", "voices"]),
+            "rate_limit": key_info.get("rate_limit", {"requests_per_minute": 1000, "requests_per_hour": 10000}),
+        }
         return key_info
     
     def check_permission(self, api_key: str, permission: str) -> bool:

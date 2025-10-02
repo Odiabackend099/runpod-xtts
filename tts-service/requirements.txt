@@ -22,6 +22,9 @@ redis==5.0.1
 sqlalchemy==2.0.23
 alembic==1.12.1
 
+# Supabase (optional, for auth/tenancy)
+supabase>=2.3.0
+
 # Monitoring & Logging
 prometheus-client==0.19.0
 structlog==23.2.0
@@ -40,12 +43,11 @@ gunicorn==21.2.0
 # Performance and Monitoring
 psutil==5.9.6
 matplotlib==3.7.2
-pandas==2.1.1
+pandas==1.5.3
 pyyaml==6.0.1
 
 # Load Testing
 aiohttp==3.9.0
-artillery==1.7.0
 
 # GPU Support (optional)
 # torch==2.1.0+cu118 --index-url https://download.pytorch.org/whl/cu118

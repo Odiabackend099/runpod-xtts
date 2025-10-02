@@ -1,0 +1,150 @@
+{
+  "suite": "synthesis",
+  "description": "Test text-to-speech synthesis endpoints",
+  "tests": [
+    {
+      "name": "Synthesize batch should return audio",
+      "request": {
+        "method": "POST",
+        "url": "/v1/synthesize",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        },
+        "formData": {
+          "text": "Hello from TestSprite automated testing",
+          "voice_id": "default",
+          "streaming": "false"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "header",
+          "name": "content-type",
+          "expected": "audio/wav"
+        },
+        {
+          "type": "bodySize",
+          "minSize": 1000,
+          "description": "Audio file should be at least 1KB"
+        }
+      ]
+    },
+    {
+      "name": "Synthesize URL should return URL",
+      "request": {
+        "method": "POST",
+        "url": "/v1/synthesize-url",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        },
+        "formData": {
+          "text": "Testing URL generation with TestSprite",
+          "voice_id": "default"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.url",
+          "expected": "exists"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.tenant_id",
+          "expected": "exists"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.voice_id",
+          "expected": "default"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.content_type",
+          "expected": "audio/wav"
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.storage_backend",
+          "expected": "matches",
+          "pattern": "^(local|supabase)$"
+        }
+      ]
+    },
+    {
+      "name": "Invalid voice ID should return 404",
+      "request": {
+        "method": "POST",
+        "url": "/v1/synthesize",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        },
+        "formData": {
+          "text": "Test with invalid voice",
+          "voice_id": "nonexistent_voice",
+          "streaming": "false"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 404
+        }
+      ]
+    },
+    {
+      "name": "Different voices should work",
+      "request": {
+        "method": "POST",
+        "url": "/v1/synthesize-url",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        },
+        "formData": {
+          "text": "Testing different voice",
+          "voice_id": "naija_female"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 200
+        },
+        {
+          "type": "jsonPath",
+          "path": "$.voice_id",
+          "expected": "naija_female"
+        }
+      ]
+    },
+    {
+      "name": "Empty text should fail",
+      "request": {
+        "method": "POST",
+        "url": "/v1/synthesize",
+        "headers": {
+          "Authorization": "Bearer ${API_KEY}"
+        },
+        "formData": {
+          "text": "",
+          "voice_id": "default"
+        }
+      },
+      "assertions": [
+        {
+          "type": "status",
+          "expected": 422,
+          "description": "Validation should fail for empty text"
+        }
+      ]
+    }
+  ]
+}

@@ -7,10 +7,12 @@ import asyncio
 import time
 from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, HTTPException, Depends, Request, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import json
+import os
+import uuid
 
 from .auth import (
     get_current_tenant, 
@@ -23,8 +25,13 @@ from ..streaming.audio_streamer import AudioStreamer, StreamingMetrics
 from ..tenancy.voice_manager import VoiceManager
 from ..utils.ssml_parser import SSMLParser
 from ..utils.monitoring import MetricsCollector
+from ..utils.usage_logger import usage_logger
+from ..utils.storage_backend import storage_backend
 
 logger = logging.getLogger(__name__)
+
+# Configuration
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -142,10 +149,22 @@ async def synthesize_text(
                 finally:
                     # Record final metrics
                     final_metrics = streaming_metrics.get_metrics()
+                    latency_ms = int((time.time() - start_time) * 1000)
                     metrics.record_synthesis_complete(
                         tenant_id, 
                         time.time() - start_time,
                         final_metrics
+                    )
+                    # Log to Supabase
+                    await usage_logger.log_synthesis(
+                        tenant_id=tenant_id,
+                        input_chars=len(parsed_text),
+                        audio_bytes=final_metrics.get("total_bytes", 0),
+                        latency_ms=latency_ms,
+                        streaming=True,
+                        voice_id=voice_id,
+                        language=language,
+                        endpoint="synthesize"
                     )
             
             return StreamingResponse(
@@ -167,7 +186,20 @@ async def synthesize_text(
             )
             
             # Record metrics
+            latency_ms = int((time.time() - start_time) * 1000)
             metrics.record_synthesis_complete(tenant_id, time.time() - start_time)
+            
+            # Log to Supabase
+            await usage_logger.log_synthesis(
+                tenant_id=tenant_id,
+                input_chars=len(parsed_text),
+                audio_bytes=len(audio_data),
+                latency_ms=latency_ms,
+                streaming=False,
+                voice_id=voice_id,
+                language=language,
+                endpoint="synthesize"
+            )
             
             return StreamingResponse(
                 iter([audio_data]),
@@ -184,7 +216,159 @@ async def synthesize_text(
     except Exception as e:
         logger.error(f"Error in synthesis: {e}")
         metrics.record_synthesis_error(tenant_id, str(e))
+        # Log error to Supabase
+        await usage_logger.log_synthesis(
+            tenant_id=tenant_id,
+            input_chars=len(text),
+            audio_bytes=0,
+            latency_ms=int((time.time() - start_time) * 1000),
+            streaming=streaming,
+            voice_id=voice_id,
+            language=language,
+            endpoint="synthesize",
+            error=str(e)
+        )
         raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.post("/v1/synthesize-url")
+@limiter.limit("1000/minute")
+async def synthesize_to_url(
+    request: Request,
+    text: str = Form(...),
+    voice_id: str = Form("default"),
+    language: str = Form("en"),
+    ssml: Optional[str] = Form(None),
+    tenant_info: Dict[str, Any] = Depends(get_current_tenant),
+    rate_limit_info: Dict[str, Any] = Depends(check_rate_limit_dependency)
+):
+    """
+    Generate audio and return a URL to download it.
+
+    Note: Uses local storage by default (AUDIO_STORAGE_DIR). For production,
+    front with a gateway or replace with S3/Supabase Storage for signed URLs.
+    """
+    start_time = time.time()
+    tenant_id = tenant_info["tenant_id"]
+
+    try:
+        # Resolve voice configuration
+        voice_config = await voice_manager.get_voice_config(tenant_id, voice_id)
+        if not voice_config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Voice '{voice_id}' not found for tenant"
+            )
+
+        # Parse SSML if provided
+        parsed_text = ssml_parser.parse(ssml) if ssml else text
+
+        # Record metrics (request)
+        metrics.record_synthesis_request(tenant_id, len(parsed_text))
+
+        # Batch synthesize to bytes (WAV default)
+        audio_data = await tts_model.synthesize_batch(
+            text=parsed_text,
+            voice_id=voice_id,
+            language=voice_config["language"],
+            reference_audio=voice_config.get("reference_audio_path")
+        )
+
+        # Save to storage backend (Supabase or local)
+        file_id = f"{uuid.uuid4().hex}.wav"
+        success, url_or_path = await storage_backend.save_audio(
+            file_id=file_id,
+            audio_data=audio_data,
+            tenant_id=tenant_id,
+            content_type="audio/wav"
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to save audio file to storage"
+            )
+
+        # Complete metrics
+        latency_ms = int((time.time() - start_time) * 1000)
+        metrics.record_synthesis_complete(tenant_id, time.time() - start_time)
+
+        # Log to Supabase
+        await usage_logger.log_synthesis(
+            tenant_id=tenant_id,
+            request_id=file_id,
+            input_chars=len(parsed_text),
+            audio_bytes=len(audio_data),
+            latency_ms=latency_ms,
+            streaming=False,
+            voice_id=voice_id,
+            language=language,
+            endpoint="synthesize-url",
+            metadata={
+                "file_id": file_id,
+                "storage_backend": "supabase" if storage_backend.is_using_supabase() else "local"
+            }
+        )
+
+        # Build final URL
+        if storage_backend.is_using_supabase():
+            # Supabase returns signed URL directly
+            url = url_or_path
+        else:
+            # Local storage: combine with PUBLIC_BASE_URL if provided
+            if PUBLIC_BASE_URL:
+                url = PUBLIC_BASE_URL.rstrip("/") + url_or_path
+            else:
+                url = url_or_path
+
+        return {
+            "tenant_id": tenant_id,
+            "voice_id": voice_id,
+            "url": url,
+            "content_type": "audio/wav",
+            "storage_backend": "supabase" if storage_backend.is_using_supabase() else "local"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in synthesize-url: {e}")
+        metrics.record_synthesis_error(tenant_id, str(e))
+        # Log error to Supabase
+        await usage_logger.log_synthesis(
+            tenant_id=tenant_id,
+            input_chars=len(text),
+            audio_bytes=0,
+            latency_ms=int((time.time() - start_time) * 1000),
+            streaming=False,
+            voice_id=voice_id,
+            language=language,
+            endpoint="synthesize-url",
+            error=str(e)
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.get("/v1/audio/{tenant_id}/{file_id}")
+async def get_audio_file(
+    tenant_id: str,
+    file_id: str,
+    tenant_info: Dict[str, Any] = Depends(get_current_tenant)
+):
+    """
+    Serve previously generated audio by file_id (local storage only).
+    Note: When using Supabase Storage, signed URLs are returned directly.
+    """
+    # Only used for local storage backend
+    if storage_backend.is_using_supabase():
+        raise HTTPException(
+            status_code=400,
+            detail="Direct file serving not available with Supabase Storage. Use signed URLs."
+        )
+    
+    file_path = storage_backend.get_local_file_path(tenant_id, file_id)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+
+    return FileResponse(file_path, media_type="audio/wav")
 
 @app.get("/v1/voices")
 async def get_voices(

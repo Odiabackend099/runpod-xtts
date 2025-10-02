@@ -1,0 +1,19 @@
+{
+  "project": "runpod-xtts-tts-service",
+  "baseUrl": "http://localhost:8000",
+  "environment": {
+    "API_KEY": "sk_test_1234567890abcdef",
+    "REDIS_URL": "redis://localhost:6379/0",
+    "AUDIO_STORAGE_DIR": "/tmp/tts-audio"
+  },
+  "testSuites": [
+    "authentication",
+    "synthesis",
+    "storage",
+    "integration"
+  ],
+  "reporting": {
+    "format": "json",
+    "outputDir": "./test-reports"
+  }
+}
