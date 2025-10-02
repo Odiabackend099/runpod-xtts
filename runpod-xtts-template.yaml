@@ -1,0 +1,16 @@
+name: runpod-xtts
+image: docker.io/library/runpod-xtts:latest   # replace if you push to Docker Hub/GHCR
+gpu: true
+gpu_type: RTX_2000_Ada
+min_vcpus: 2
+min_memory: 4Gi
+ports:
+  - port: 8000
+    http: true
+    isDefault: true
+volume:
+  mountPath: /workspace
+startCommand: >
+  bash -c "cd /workspace &&
+           echo 'Starting RunPod XTTS Service...' &&
+           uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --log-level info"
