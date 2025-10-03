@@ -13,17 +13,19 @@ volume:
 startCommand: >
   bash -lc '
   set -e
-  echo "🔍 Locating main.py..."
-  for d in /workspace/runpod-xtts /workspace; do
-    if [ -f "$d/main.py" ]; then
-      cd "$d"
-      echo "✅ Found main.py in: $(pwd)"
-      break
-    fi
-  done
+  echo "🔍 Setting up TTS service..."
+  cd /workspace
+  if [ ! -d "runpod-xtts" ]; then
+    echo "📥 Cloning repository..."
+    git clone https://github.com/Odiabackend099/runpod-xtts.git
+  else
+    echo "📦 Repository exists, pulling latest..."
+    cd runpod-xtts && git pull origin main && cd /workspace
+  fi
+  cd /workspace/runpod-xtts
   echo "📂 Current directory: $(pwd)"
-  echo "📄 Files in directory:"
-  ls -la
+  echo "📄 Installing dependencies..."
+  pip install -q -r requirements.txt
   echo "🚀 Starting TTS service..."
   python3 main.py
   '
