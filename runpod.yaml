@@ -5,7 +5,7 @@ gpu_type: RTX_2000_Ada
 min_vcpus: 2
 min_memory: 4Gi
 ports:
-  - port: 8000
+  - port: 8888
     http: true
     isDefault: true
 volume:
@@ -14,5 +14,6 @@ startCommand: >
   bash -c "cd /workspace &&
            git clone https://github.com/Odiabackend099/runpod-xtts.git || true &&
            cd runpod-xtts &&
+           pip install --upgrade pip &&
            pip install -r requirements.txt &&
-           uvicorn main:app --host 0.0.0.0 --port 8000"
+           uvicorn main:app --host 0.0.0.0 --port 8888"

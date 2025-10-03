@@ -1,164 +1,61 @@
-# 🚀 RunPod Deployment Guide for XTTS Service
+# 🚀 RunPod Deployment Guide (XTTS)
 
-This guide walks you through deploying the CallWaiting.ai TTS service on RunPod using the provided template.
+## Deployment
+1. Go to RunPod Dashboard → Deploy New Pod  
+2. Select **From GitHub Repo**  
+3. Paste: `https://github.com/Odiabackend099/runpod-xtts.git`  
+4. RunPod reads `runpod.yaml` and configures everything.
 
-## 📋 Prerequisites
+## Test
+```bash
+curl https://<your-pod-id>-8888.proxy.runpod.net/health
+```
 
-- RunPod account with credits
-- Docker Hub or GitHub Container Registry account (for custom images)
-- Access to the repository: `https://github.com/Odiabackend099/runpod-xtts.git`
-
-## 🐳 Option 1: Use Pre-built Docker Image (Recommended)
-
-### Step 1: Build and Push Docker Image
+## Example Synthesis
 
 ```bash
-# Build the optimized RunPod image
-docker build -f Dockerfile.runpod -t runpod-xtts:latest .
-
-# Tag for Docker Hub (replace 'yourusername' with your Docker Hub username)
-docker tag runpod-xtts:latest yourusername/runpod-xtts:latest
-
-# Push to Docker Hub
-docker push yourusername/runpod-xtts:latest
+curl -X POST "https://<your-pod-id>-8888.proxy.runpod.net/synthesize" \
+-H "Authorization: Bearer cw_demo_12345" \
+-F "text=Hello from Nigeria!" \
+-F "voice_id=naija_female" \
+--output hello.mp3
 ```
 
-### Step 2: Update Template
+## Available Voices
 
-Edit `runpod-xtts-template.yaml` and update the image line:
-```yaml
-image: docker.io/yourusername/runpod-xtts:latest
-```
+- **default**: en-US-AriaNeural (neutral)
+- **naija_female**: en-US-JennyNeural (female)
+- **naija_male**: en-US-GuyNeural (male)
+- **professional**: en-US-DavisNeural (male)
+- **friendly**: en-US-EmmaNeural (female)
+- **calm**: en-US-MichelleNeural (female)
+- **energetic**: en-US-BrandonNeural (male)
 
-### Step 3: Deploy on RunPod
+## API Endpoints
 
-1. Go to [RunPod Dashboard](https://runpod.io/console/pods)
-2. Click **"Deploy New Pod"**
-3. Select **"From Template"**
-4. Upload your `runpod-xtts-template.yaml` file
-5. Click **"Deploy"**
+- `GET /health` - Health check
+- `GET /voices` - List available voices
+- `POST /synthesize` - Synthesize text to speech
+- `GET /tenant/stats` - Get tenant statistics
 
-## 🏗️ Option 2: Build on RunPod (Slower but No Registry Needed)
+## API Keys
 
-### Step 1: Deploy with Build
+- **Demo Key**: `cw_demo_12345` (tenant: callwaiting_demo)
+- **Test Key**: `test_key_67890` (tenant: test_tenant)
 
-1. Go to RunPod Dashboard
-2. Click **"Deploy New Pod"**
-3. Select **"From Template"**
-4. Upload `runpod-xtts-template.yaml`
-5. **Modify the startCommand** to include build steps:
+## Configuration
 
-```yaml
-startCommand: >
-  bash -c "cd /workspace &&
-           git clone https://github.com/Odiabackend099/runpod-xtts.git . &&
-           docker build -f Dockerfile.runpod -t runpod-xtts:latest . &&
-           uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1"
-```
+The service runs on port 8888 and includes:
+- GPU support (RTX 2000 Ada)
+- 2 vCPUs minimum
+- 4GB RAM
+- Persistent `/workspace` volume
+- Automatic HTTPS proxy
 
-## ⚙️ Template Configuration
+## Cost
 
-The `runpod-xtts-template.yaml` includes:
+Approximately $0.20/hour with RTX 2000 Ada GPU.
 
-- **GPU**: RTX 2000 Ada (adjustable based on your needs)
-- **CPU**: Minimum 2 vCPUs
-- **Memory**: 4GB RAM
-- **Port**: 8000 (HTTP enabled, default)
-- **Volume**: `/workspace` for persistence
-- **Startup**: Optimized uvicorn command
+## Support
 
-## 🔧 Customization Options
-
-### GPU Types
-```yaml
-gpu_type: RTX_2000_Ada    # Budget option
-gpu_type: RTX_3000_Ada    # Mid-range
-gpu_type: RTX_4000_Ada    # High-end
-gpu_type: RTX_5000_Ada    # Premium
-```
-
-### Resource Scaling
-```yaml
-min_vcpus: 4              # More CPU cores
-min_memory: 8Gi           # More RAM
-```
-
-### Multiple Workers
-```yaml
-startCommand: >
-  bash -c "cd /workspace &&
-           uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4"
-```
-
-## 🌐 Accessing Your Service
-
-Once deployed, RunPod will provide:
-- **External URL**: `https://your-pod-id-8000.proxy.runpod.net`
-- **Direct Access**: Use this URL in your applications
-- **Health Check**: `https://your-pod-id-8000.proxy.runpod.net/health`
-
-## 📊 Monitoring
-
-The service includes built-in monitoring:
-- Health endpoint: `/health`
-- Metrics endpoint: `/metrics` (if enabled)
-- Logs available in RunPod console
-
-## 💰 Cost Optimization
-
-### Tips to Reduce Costs:
-1. **Use RTX 2000 Ada** for development/testing
-2. **Scale up to RTX 3000/4000** for production
-3. **Stop pods** when not in use
-4. **Use spot instances** for non-critical workloads
-
-### Estimated Costs (as of 2024):
-- RTX 2000 Ada: ~$0.20/hour
-- RTX 3000 Ada: ~$0.40/hour
-- RTX 4000 Ada: ~$0.60/hour
-
-## 🔒 Security Considerations
-
-1. **API Keys**: Store in environment variables
-2. **HTTPS**: RunPod provides automatic HTTPS
-3. **Rate Limiting**: Built into the service
-4. **Authentication**: API key validation included
-
-## 🚨 Troubleshooting
-
-### Common Issues:
-
-**Pod won't start:**
-- Check Docker image exists and is accessible
-- Verify startCommand syntax
-- Check RunPod logs for errors
-
-**Service not responding:**
-- Verify port 8000 is exposed
-- Check health endpoint: `/health`
-- Review application logs
-
-**GPU not detected:**
-- Ensure `gpu: true` in template
-- Check GPU type is available in your region
-- Verify CUDA dependencies in Dockerfile
-
-## 📞 Support
-
-- **RunPod Support**: [RunPod Discord](https://discord.gg/runpod)
-- **Service Issues**: Check GitHub issues
-- **Documentation**: [RunPod Docs](https://docs.runpod.io/)
-
----
-
-## 🎯 Quick Deploy Checklist
-
-- [ ] Build and push Docker image (Option 1) OR prepare build command (Option 2)
-- [ ] Update template with correct image name
-- [ ] Upload template to RunPod
-- [ ] Deploy pod
-- [ ] Test health endpoint
-- [ ] Configure your application with the RunPod URL
-- [ ] Monitor costs and performance
-
-**Ready to deploy! 🚀**
+For issues, check the RunPod console logs or GitHub repository.
