@@ -1,5 +1,5 @@
 name: runpod-xtts
-image: docker.io/library/runpod-xtts:latest   # replace if you push to Docker Hub/GHCR
+image: docker.io/callwaiyingai/runpod-xtts:latest
 gpu: true
 gpu_type: RTX_2000_Ada
 min_vcpus: 2
