@@ -11,6 +11,19 @@ ports:
 volume:
   mountPath: /workspace
 startCommand: >
-  bash -c "cd /workspace &&
-           echo 'Starting RunPod XTTS Service...' &&
-           uvicorn main:app --host 0.0.0.0 --port 8000 --workers 1 --log-level info"
+  bash -lc '
+  set -e
+  echo "🔍 Locating main.py..."
+  for d in /workspace/runpod-xtts /workspace; do
+    if [ -f "$d/main.py" ]; then
+      cd "$d"
+      echo "✅ Found main.py in: $(pwd)"
+      break
+    fi
+  done
+  echo "📂 Current directory: $(pwd)"
+  echo "📄 Files in directory:"
+  ls -la
+  echo "🚀 Starting TTS service..."
+  python3 main.py
+  '

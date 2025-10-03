@@ -7,7 +7,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
+# Copy all project files
 COPY . .
 
-EXPOSE 8888
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8888"]
+# Expose port 8000 (matching the service)
+EXPOSE 8000
+
+# Start command matches the template - auto-locate main.py and run with python
+CMD ["bash", "-lc", "set -e && echo '🔍 Locating main.py...' && for d in /workspace/runpod-xtts /workspace; do if [ -f \"$d/main.py\" ]; then cd \"$d\" && echo \"✅ Found main.py in: $(pwd)\" && break; fi; done && echo \"📂 Current directory: $(pwd)\" && ls -la && echo \"🚀 Starting TTS service...\" && python3 main.py"]
